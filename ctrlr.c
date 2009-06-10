@@ -1,3 +1,6 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include "usbdrv.h"
 
 //all lifted from UPCB and modified for AVR
 //commented out constants are 0 in V-USB header - probably wrong
@@ -8,7 +11,7 @@ PROGMEM char usbDescriptorDevice[] = {
         0x00,           //class code
         0x00,           //subclass code
         0x00,           //protocol code
-        0x40,           //EPO buffer size //probably going to break something...
+        0x8,           //EPO buffer size //VSHG is 40, V-USB is 8
          0xC4, 0x10,    //vendor ID 
          0xC0, 0x82, //product ID
         0x06, 0x00, //device release number
@@ -118,4 +121,150 @@ PROGMEM char usbDescriptorHidReport[] = {
  0x08, 0xb1,
  0x02, 0xc0   //--112 == 0x70
  };
+
+#define REPORTBUFFER_SIZE 0x13
+
+static uchar reportbuffer[REPORTBUFFER_SIZE];
+static uchar response[8] = {33, 38, 0, 0, 0, 0, 0, 0};
+static int repbuffer_idx;
+
+// map the 4 dpad bits into a hat switch
+// map as on a standard JLF connector... UDLR will do
+// 0xF shouldn't ever be hit
+// ... this is all backwards because the bits are flipped. urgh.
+static const char dpad[] = {
+	      // UDLR
+	0xF,  // 0000
+	0xF,  // 0001
+	0xF,  // 0010
+	0xF,  // 0011
+	0xF,  // 0100
+	0x7,  // 0101
+	0x1,  // 0110
+	0x0,  // 0111
+	0xF,  // 1000
+	0x5,  // 1001
+	0x3,  // 1010
+	0x4,  // 1011
+	0xF,  // 1100
+	0x6,  // 1101
+	0x2,  // 1110
+	0x8   // 1111 (neutral)
+};
+
+void initReport() {
+	int i;
+	for (i = 0;i < REPORTBUFFER_SIZE;i++)
+		reportbuffer[i] = 0;
+
+	//set analogs to neutral
+	reportbuffer[3] = reportbuffer[4] = reportbuffer[5] = reportbuffer[6] = 0x80;
+}
+
+void doReport() {
+	// NYI
+	
+	//B0, pin 12 on a tn2313
+/*	if (PINB & 0x1) {
+		reportbuffer[0] = 0xff;
+	} else {
+		reportbuffer[0] = 0;
+	}*/
+
+	reportbuffer[2] = dpad[PINB & 0xF];
+
+	if (PIND & 0x10)
+		reportbuffer[1] = 0x10;
+	else
+		reportbuffer[1] = 0;
+
+	if (PIND & 0x20) {
+		reportbuffer[0] = 0x4;
+		reportbuffer[12] = 0xFF;
+	} else {
+		reportbuffer[0] = 0;
+		reportbuffer[12] = 0;
+	}
+
+	return;
+}
+
+uchar usbFunctionSetup(uchar data[8]) {
+	usbRequest_t *rq = (usbRequest_t*)data;
+	static uchar idleRate;
+	static uchar protocol;
+
+	//only vendor and class requests should be coming in here
+	//other stuff is handled in usbdrv.c
+	//
+	//borrowed from PS2USB. Probably needs a rewrite.
+
+	if ((rq->bmRequestType & USBRQ_TYPE_MASK) == USBRQ_TYPE_CLASS) {
+		if (rq->bRequest == USBRQ_HID_GET_REPORT) {
+//			usbMsgPtr = reportbuffer;
+		/*	if (len < REPORTBUFFER_SIZE)
+				return len;
+		*///	return REPORTBUFFER_SIZE;
+			usbMsgPtr = response;
+			return 8;
+		} else if (rq->bRequest == USBRQ_HID_GET_IDLE) {
+			usbMsgPtr = &idleRate;
+			return 1;
+		} else if (rq->bRequest == USBRQ_HID_SET_IDLE) {
+			idleRate = rq->wValue.bytes[1];
+		} else if (rq->bRequest == USBRQ_HID_GET_PROTOCOL) {
+			//protocol doesn't matter for non-boot devices, but meh
+			usbMsgPtr = &protocol;
+			return 1;
+		} else if (rq->bRequest == USBRQ_HID_SET_PROTOCOL) {
+			protocol = rq->wValue.bytes[1];
+			return 0;
+		}
+	}
+
+	//umm... dunno
+	//if this triggers a transfer return USB_NO_MSG
+	// also set repbuffer_idx to 0 to reset the transfer
+	return 0;
+}
+
+uchar usbFunctionRead(uchar *data, uchar len) {
+	
+	if (len + repbuffer_idx > REPORTBUFFER_SIZE)
+		len = REPORTBUFFER_SIZE - repbuffer_idx;
+
+	int i;
+	for (i = 0;i < len;i++) {
+		data[i] = reportbuffer[repbuffer_idx + i];
+	}
+
+	repbuffer_idx += len;
+
+	return len;
+}
+
+int main() {
+	//blah blah init
+	
+	initReport();
+	usbInit();
+	sei();
+	
+	// to send the data buffer
+	// can't send with usbSetInterrupt because it's too long
+//	usbSetInterrupt(reportbuffer, REPORTBUFFER_SIZE);
+	while(1) {
+
+	//	while (!usbInterruptIsReady()) {usbPoll();};
+
+		usbPoll();
+		doReport();
+		usbSetInterrupt(reportbuffer, 8); //will it continue...?
+		repbuffer_idx = 8;
+		// erm... ?
+	}
+
+	return 0; //or not
+}
+
 

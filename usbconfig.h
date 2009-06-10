@@ -30,7 +30,7 @@ section at the end of this file).
 /* This is the port where the USB bus is connected. When you configure it to
  * "B", the registers PORTB, PINB and DDRB will be used.
  */
-#define USB_CFG_DMINUS_BIT      4
+#define USB_CFG_DMINUS_BIT      1
 /* This is the bit number in USB_CFG_IOPORT where the USB D- line is connected.
  * This may be any bit in the port.
  */
@@ -43,7 +43,7 @@ section at the end of this file).
  * interrupt, the USB interrupt will also be triggered at Start-Of-Frame
  * markers every millisecond.]
  */
-#define USB_CFG_CLOCK_KHZ       16000 //since I have 16mhz crystals around...
+#define USB_CFG_CLOCK_KHZ       (F_CPU/1000)
 /* Clock rate of the AVR in kHz. Legal values are 12000, 12800, 15000, 16000,
  * 16500 and 20000. The 12.8 MHz and 16.5 MHz versions of the code require no
  * crystal, they tolerate +/- 1% deviation from the nominal frequency. All
@@ -127,7 +127,7 @@ section at the end of this file).
  * transfers. Set it to 0 if you don't need it and want to save a couple of
  * bytes.
  */
-#define USB_CFG_IMPLEMENT_FN_READ       0
+#define USB_CFG_IMPLEMENT_FN_READ       0 // going to need to be 1 later
 /* Set this to 1 if you need to send control replies which are generated
  * "on the fly" when usbFunctionRead() is called. If you only want to send
  * data from a static buffer, set it to 0 and return the data from
@@ -320,17 +320,17 @@ section at the end of this file).
  */
 
 //dunno how this is meant to work... ps2usb just leaves them at 0 but rewrites the HID report
-//#define USB_CFG_DESCR_PROPS_DEVICE                  (USB_PROP_LENGTH(0x12))
-#define USB_CFG_DESCR_PROPS_DEVICE                  0
-//#define USB_CFG_DESCR_PROPS_CONFIGURATION           (USB_PROP_LENGTH(0x9 + 0x9 + 0x9 + 0x7))
-#define USB_CFG_DESCR_PROPS_CONFIGURATION           0
+#define USB_CFG_DESCR_PROPS_DEVICE                  (USB_PROP_LENGTH(0x12))
+//#define USB_CFG_DESCR_PROPS_DEVICE                  0
+#define USB_CFG_DESCR_PROPS_CONFIGURATION           (USB_PROP_LENGTH(0x9 + 0x9 + 0x9 + 0x7))
+//#define USB_CFG_DESCR_PROPS_CONFIGURATION           0
 #define USB_CFG_DESCR_PROPS_STRINGS                 0
 #define USB_CFG_DESCR_PROPS_STRING_0                0
 #define USB_CFG_DESCR_PROPS_STRING_VENDOR           0
 #define USB_CFG_DESCR_PROPS_STRING_PRODUCT          0
 #define USB_CFG_DESCR_PROPS_STRING_SERIAL_NUMBER    0
 #define USB_CFG_DESCR_PROPS_HID                     0
-#define USB_CFG_DESCR_PROPS_HID_REPORT              0
+#define USB_CFG_DESCR_PROPS_HID_REPORT              (USB_PROP_LENGTH(0x70))
 #define USB_CFG_DESCR_PROPS_UNKNOWN                 0
 
 /* ----------------------- Optional MCU Description ------------------------ */

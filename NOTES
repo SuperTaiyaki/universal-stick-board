@@ -1,0 +1,93 @@
+AVR + V-USB
+-PS3 via V-USB, data scraped from UPCB
+	-Faking a VSHG... what can/can't work?
+	-UPCB has \0s between chars in the USB IDs and stuff
+		-Probably a unicode thing
+	-Digital only, analog only... ???
+	-Can probably steal the USB HID report descriptor verbatim
+	-Where's the ID LED thingo set? Kind of hard to report it back anyway...
+
+bytes from UPCB:
+	0x13 bytes (header provides many more bytes, for DS3?)
+	actual report seems to be 8 bytes?
+	0: buttons... but only 8 bits ???
+		b0 -> 14 = FF (square?)
+		b1 -> 13  (X)
+		b2 -> 12  (circle)   V
+		b3 -> 11  (triangle) ^ may be mixed up
+
+		b4 -> 15 (L1)
+		b5 -> 16 (R1)
+		b6 -> 17 (L2)
+		b7 -> 18 (R2)
+
+		from a DS3:
+		Tr Ci X Sq (same as DS1/2)
+		shoulders mapping below?
+		...all over the place
+
+	1: home button (00010000) start b1 select b0
+		b0 select (no other bits?)
+		b1 start
+		b4 home
+	2: digital pad
+		U  0x0
+		UR 0x1
+		UL 0x7
+		D  0x4
+		DR 0x3
+		DL 0x5
+		L  0x6
+		R  0x2
+		looks like CW from up... stupid
+		lazy way is to build a 4-bit lookup table for the Dpad
+	3: analog (set 0x80)
+	4: analog (set 0x80)
+	5: analog? (0x80)
+	6: analog
+
+-PC USB fairly trivial
+-PSX via modified sat2ps2 code
+	-Upgrade to dualshock?
+-Saturn via new code
+-DC... probably just leave it alone, just play nice with it
+-USB hub for PS3/360 awesomeness?
+	-Run extra port(s) to the casing for even more awesome
+-" This may be up to ca. 1200 cycles @ 12 MHz (= 100us) if
+the host conforms to the standard. The driver will consume CPU cycles for all
+USB messages, even if they address another (low-speed) device on the same bus."
+shouldn't cause problems...
+-for HRAP: 4x direction buttons, 8x face buttons, 2x aux buttons -> 14 lines
+-attiny2313 has 20 pins -2 for power -> only 4 lines left... enough for PS3, not for anything else
+-atmega88 has 28 pins -> 12 lines left, enough for anything (sort of)
+-Detect lines. RJ45 has 8 pins, can use location of +5v to figure out which controller to use, or to go Hi-Z (requires one more line per controller...)
+-USB is probably 1-high, rather than 1-low for PSX/saturn
+
+pinout:
+1: RST
+2: START
+3: USB-
+4: XTAL
+5: XTAL
+6: USB+
+7: X
+8: O
+9: R1
+10: GND
+
+11: T
+12: []
+13: /\
+14: L1
+15: U
+16: D
+17: L
+18: R
+19: ... (Home?)
+20: VCC
+
+USB stack: http://forums.penny-arcade.com/showthread.php?s=1dc535ef27f8c2d01f041f1a2162b978&t=78518&page=2
+V-USB: http://www.obdev.at/products/vusb/
+UPCB: SRK somewhere
+USB in a nutshell: http://www.beyondlogic.org/usbnutshell/usb1.htm
+more usb: http://www.usbmadesimple.co.uk/ums_4.htm
