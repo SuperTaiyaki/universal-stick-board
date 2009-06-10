@@ -56,8 +56,8 @@ PROGMEM char usbDescriptorConfiguration[] = {
          /*ENDPOINT*/5,      //type od desc
          0x81,          //endpoint address EP1 IN
          0x03,          //transfer style: interrupt
-         0x40, 0x00,    //max packet size : 64 bytes
-         0x0A,          //interval: 10ms 
+         0x08, 0x00,    //max packet size : 64 bytes
+         0x04,          //interval: 4ms 
 
 };
 
@@ -125,7 +125,7 @@ PROGMEM char usbDescriptorHidReport[] = {
 #define REPORTBUFFER_SIZE 0x13
 
 static uchar reportbuffer[REPORTBUFFER_SIZE];
-static uchar response[8] = {33, 38, 0, 0, 0, 0, 0, 0};
+static uchar response[8] = {33, 38,0,0,0,0,0,0};
 static int repbuffer_idx;
 
 // map the 4 dpad bits into a hat switch
@@ -161,6 +161,10 @@ void initReport() {
 	reportbuffer[3] = reportbuffer[4] = reportbuffer[5] = reportbuffer[6] = 0x80;
 }
 
+// for flexible mapping
+#define IN_SQ (DDRB & (1 << 4))
+// and the like.
+
 void doReport() {
 	// NYI
 	
@@ -171,14 +175,22 @@ void doReport() {
 		reportbuffer[0] = 0;
 	}*/
 
-	reportbuffer[2] = dpad[PINB & 0xF];
+	// on the atmega88 the dpad is spread around a bit
+	// D5 D6 D7 B0
+	uchar dirs = PIND << 5;
+	// would be faster with bst/bld
+	dirs |= (PINB & 0x1) ? 8 : 0;
 
-	if (PIND & 0x10)
+	reportbuffer[2] = dpad[dirs];
+
+	//other buttons are scattered around, mostly along C0-5 (face buttons)
+	//also D0-2
+	if (!(PINC & (1 << 5)))
 		reportbuffer[1] = 0x10;
 	else
 		reportbuffer[1] = 0;
 
-	if (PIND & 0x20) {
+	if (!(PINC & (1 << 4))) {
 		reportbuffer[0] = 0x4;
 		reportbuffer[12] = 0xFF;
 	} else {
@@ -201,10 +213,8 @@ uchar usbFunctionSetup(uchar data[8]) {
 
 	if ((rq->bmRequestType & USBRQ_TYPE_MASK) == USBRQ_TYPE_CLASS) {
 		if (rq->bRequest == USBRQ_HID_GET_REPORT) {
-//			usbMsgPtr = reportbuffer;
-		/*	if (len < REPORTBUFFER_SIZE)
-				return len;
-		*///	return REPORTBUFFER_SIZE;
+
+			// UPCB does it this way
 			usbMsgPtr = response;
 			return 8;
 		} else if (rq->bRequest == USBRQ_HID_GET_IDLE) {
@@ -254,14 +264,15 @@ int main() {
 	// can't send with usbSetInterrupt because it's too long
 //	usbSetInterrupt(reportbuffer, REPORTBUFFER_SIZE);
 	while(1) {
-
-	//	while (!usbInterruptIsReady()) {usbPoll();};
-
 		usbPoll();
+		while (!usbInterruptIsReady()) {usbPoll();};
 		doReport();
 		usbSetInterrupt(reportbuffer, 8); //will it continue...?
 		repbuffer_idx = 8;
-		// erm... ?
+		while (!usbInterruptIsReady()) {usbPoll();};
+		usbSetInterrupt(reportbuffer + 8, 8);
+		while (!usbInterruptIsReady()) {usbPoll();};
+		usbSetInterrupt(reportbuffer + 16, 3);
 	}
 
 	return 0; //or not

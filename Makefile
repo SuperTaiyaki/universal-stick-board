@@ -7,9 +7,11 @@
 # License: GNU GPL v2 (see License.txt) or proprietary (CommercialLicense.txt)
 # This Revision: $Id: Makefile 277 2007-03-20 10:53:33Z cs $
 
-DEVICE = attiny2313
+DEVICE = atmega88
 AVRDUDE = avrdude -c stk500v2 -P avrdoper -p $(DEVICE)
 # Choose your favorite programmer and interface above.
+# attiny2313 fuses: -U lfuse:w:0xcf:m -U hfuse:w:0xdd:m
+# atmega 88 fuses: -U lfuse:w:0xff:m -U hfuse:w:0xde:m
 
 COMPILE = avr-gcc -Wall -Os -Iusbdrv -I. -DF_CPU=16000000 -mmcu=$(DEVICE) #-DDEBUG_LEVEL=2
 # NEVER compile the final product with debugging! Any debug output will
