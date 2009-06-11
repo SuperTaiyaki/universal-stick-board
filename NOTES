@@ -49,7 +49,14 @@ bytes from UPCB:
 -PC USB fairly trivial
 -PSX via modified sat2ps2 code
 	-Upgrade to dualshock?
+	-Nuisance because of USB electrical interface... ACK can go on USB-
+	because it's pulled up
+	-ATT pulled down... will it work?
+	-ARGH mega88 has proper SPI rather than USI - probably not usable
+	because of SS'.
+
 -Saturn via new code
+	-Or not bother.
 -DC... probably just leave it alone, just play nice with it
 -USB hub for PS3/360 awesomeness?
 	-Run extra port(s) to the casing for even more awesome
@@ -99,8 +106,8 @@ pinout: (mega88)
 2: L1 (D0)
 3: L2 (D1)
 4: PS (D2)
-5: USB- / PSX ATT (D3)
-6: USB+ / PSX ACK (D4)
+5: USB- / PSX ACK (D3)
+6: USB+ / PSX ATT (D4)
 7: VCC
 8: GND 
 9: XTAL
@@ -134,7 +141,6 @@ dpad: 4
 buttons: 8 + 2 + 1
 
 {usb : 2 PSX: 5 }
-
 
 USB stack: http://forums.penny-arcade.com/showthread.php?s=1dc535ef27f8c2d01f041f1a2162b978&t=78518&page=2
 V-USB: http://www.obdev.at/products/vusb/

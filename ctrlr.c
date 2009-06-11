@@ -1,6 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "usbdrv.h"
+#include "mapping.h"
 
 //all lifted from UPCB and modified for AVR
 //commented out constants are 0 in V-USB header - probably wrong
@@ -179,23 +180,6 @@ void initReport() {
 	reportbuffer[3] = reportbuffer[4] = reportbuffer[5] = reportbuffer[6] = 0x80;
 }
 
-// for flexible mapping
-#define IN_SQ (!(PINC & (1 << 3)))
-#define IN_CI (!(PINC & (1 << 1)))
-#define IN_X  (!(PINC & (1 << 2)))
-#define IN_TR (!(PINC & (1 << 0)))
-
-#define IN_ST (!(PINC & (1 << 4)))
-#define IN_SE (!(PINC & (1 << 5)))
-#define IN_PS (!(PIND & (1 << 2)))
-
-#define IN_R1 (!(PINB & (1 << 1)))
-#define IN_R2 (!(PINB & (1 << 2)))
-#define IN_L1 (!(PIND & (1 << 0)))
-#define IN_L2 (!(PIND & (1 << 1)))
-//directions are handled differently
-
-// and the like.
 
 #define SET(reg, bit) asm("sbr reg, (bit)")
 
@@ -267,6 +251,7 @@ void doReport() {
 
 void ioInit() {
 	//set pull-ups on all the input pins
+	//inputs are pretty horrible (noisy) without this
 	// D0-D2, D5-D7
 	// 11100111
 	PORTD = 0xE7;
@@ -277,6 +262,13 @@ void ioInit() {
 
 	// B0, B1, B2
 	PORTB = 0x7;
+
+	//status leds
+/*	sbi(PORTB, 1);
+	sbi(PORTB, 2);
+*/
+	cbi(PORTB, 1);
+	cbi(PORTB, 2);
 	return;
 }
 
@@ -332,7 +324,7 @@ uchar usbFunctionRead(uchar *data, uchar len) {
 	return len;
 }
 
-int main() {
+void usb_main() {
 	//blah blah init
 	
 	initReport();
@@ -355,7 +347,50 @@ int main() {
 		usbSetInterrupt(reportbuffer + 16, 3);
 	}
 
-	return 0; //or not
+	return; //or not
 }
 
+//shouldn't really go here, but it's not likely to change
+void psx_main();
 
+int main() {
+	// TODO: decide between usb_main and psx_main
+	// maybe wait to see if PSX ATT line goes low, if it doesn't assume USB?
+	// pull up CLK, wait 16ms, if it hasn't gone down then assume it's not
+	// PSX
+	// pull up clock
+	
+	//B1 is power LED
+	//B2 is USB status
+/*	
+	sbi(PORTB, 1);
+	sbi(PORTB, 2);
+*/
+	sbi(DDRB, 1);
+	sbi(DDRB, 2);
+
+	uchar psx = 0;
+	sbi(PORTB, 5);
+	//going to stall for 1 frame = 16ms = 256k clocks
+	//timer1 with maximum prescaler (1024) is 250 cycles
+	//TCCR0A = 11000000 (set OC0A on match)
+	TCCR0A = 0xC0;
+	//TCCR0B = 00000101 (system clock / 1024)
+	TCCR0B = 0x05;
+	OCR0A = 250;
+	while(!(TIFR0 & (1 << OCF0A))) {
+		if (!(PINB & (1 << 5))) {
+			psx = 1;
+			cbi(DDRB, 2);
+			break;
+		}
+	}
+//	psx =0 ;
+	TCCR0B = 0; //stop the counter
+	PORTB = 0;
+	if (psx)
+		psx_main();
+	else
+		usb_main();
+	return 0; // ...
+}

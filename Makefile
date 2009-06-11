@@ -17,7 +17,7 @@ COMPILE = avr-gcc -Wall -Os -Iusbdrv -I. -DF_CPU=16000000 -mmcu=$(DEVICE) #-DDEB
 # NEVER compile the final product with debugging! Any debug output will
 # distort timing so that the specs can't be met.
 
-OBJECTS = usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o ctrlr.o
+OBJECTS = usbdrv/usbdrv.o usbdrv/usbdrvasm.o usbdrv/oddebug.o ctrlr.o psx.o
 
 # symbolic targets:
 all:	ctrlr.hex
