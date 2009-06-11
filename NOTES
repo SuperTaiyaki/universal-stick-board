@@ -9,7 +9,6 @@ AVR + V-USB
 
 bytes from UPCB:
 	0x13 bytes (header provides many more bytes, for DS3?)
-	actual report seems to be 8 bytes?
 	0: buttons... but only 8 bits ???
 		b0 -> 14 = FF (square?)
 		b1 -> 13  (X)
@@ -25,6 +24,7 @@ bytes from UPCB:
 		Tr Ci X Sq (same as DS1/2)
 		shoulders mapping below?
 		...all over the place
+		0xFFs are probably pressure sensitive
 
 	1: home button (00010000) start b1 select b0
 		b0 select (no other bits?)
@@ -63,7 +63,7 @@ shouldn't cause problems...
 -Detect lines. RJ45 has 8 pins, can use location of +5v to figure out which controller to use, or to go Hi-Z (requires one more line per controller...)
 -USB is probably 1-high, rather than 1-low for PSX/saturn
 
-pinout:
+pinout: (tn2313)
 1: RST
 2: START
 3: USB-
@@ -85,6 +85,56 @@ pinout:
 18: R
 19: ... (Home?)
 20: VCC
+
+power: 2
+reset: 1
+xtal: 2
+dpad: 4
+buttons: 6+1
+psx:5 usb: 2
+
+pinout: (mega88)
+
+1: RST
+2: L1 (D0)
+3: L2 (D1)
+4: PS (D2)
+5: USB- / PSX ATT (D3)
+6: USB+ / PSX ACK (D4)
+7: VCC
+8: GND 
+9: XTAL
+10: XTAL
+11: L (D5)
+12: R (D6)
+13: D (D7)
+14: U (B0)
+
+15: R1 (B1)
+16: R2 (B2)
+17: MOSI
+18: MISO
+19: SCK
+20: VCC
+21: NC
+22: GND
+23: Tr (C0)
+24: Ci (C1)
+25: X  (C2)
+26: Sq (C3)
+27: St (C4)
+28: Sel (C5)
+
+(woah cramped)
+reset: 1
+power: 5
+xtal: 2
+
+dpad: 4
+buttons: 8 + 2 + 1
+
+{usb : 2 PSX: 5 }
+
 
 USB stack: http://forums.penny-arcade.com/showthread.php?s=1dc535ef27f8c2d01f041f1a2162b978&t=78518&page=2
 V-USB: http://www.obdev.at/products/vusb/

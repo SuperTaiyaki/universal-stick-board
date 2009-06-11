@@ -121,7 +121,25 @@ PROGMEM char usbDescriptorHidReport[] = {
  0x08, 0xb1,
  0x02, 0xc0   //--112 == 0x70
  };
+/*
+const unsigned char PS3USB_String0[] = {
+	4,	// bLength
+	STRING,	// bDescriptorType
+	0x09,	// wLANGID[0] (low byte)
+	0x04	// wLANGID[0] (high byte)
+};
 
+//from VSHG
+const unsigned char PS3USB_String1[] = {
+	10, 3, 83, 0, 69, 0, 71, 0, 65, 0 
+	}; 
+//From VSHG
+const unsigned char PS3USB_String2[] = {
+	48, 3, 86, 0, 73, 0, 82, 0, 84, 0, 85, 0, //12
+	65, 0, 32, 0, 83, 0, 84, 0, 73, 0, 67, 0, //24
+	75, 0, 32, 0, 72, 0, 105, 0, 103, 0, 104, 0, //36
+	32, 0, 71, 0, 114, 0, 97, 0, 100, 0, 101, 0 }; //48
+*/
 #define REPORTBUFFER_SIZE 0x13
 
 static uchar reportbuffer[REPORTBUFFER_SIZE];
@@ -162,10 +180,28 @@ void initReport() {
 }
 
 // for flexible mapping
-#define IN_SQ (DDRB & (1 << 4))
+#define IN_SQ (!(PINC & (1 << 3)))
+#define IN_CI (!(PINC & (1 << 1)))
+#define IN_X  (!(PINC & (1 << 2)))
+#define IN_TR (!(PINC & (1 << 0)))
+
+#define IN_ST (!(PINC & (1 << 4)))
+#define IN_SE (!(PINC & (1 << 5)))
+#define IN_PS (!(PIND & (1 << 2)))
+
+#define IN_R1 (!(PINB & (1 << 1)))
+#define IN_R2 (!(PINB & (1 << 2)))
+#define IN_L1 (!(PIND & (1 << 0)))
+#define IN_L2 (!(PIND & (1 << 1)))
+//directions are handled differently
+
 // and the like.
 
+#define SET(reg, bit) asm("sbr reg, (bit)")
+
 void doReport() {
+	initReport();
+	// could be optimized by skipping the analog bits
 	// NYI
 	
 	//B0, pin 12 on a tn2313
@@ -177,27 +213,70 @@ void doReport() {
 
 	// on the atmega88 the dpad is spread around a bit
 	// D5 D6 D7 B0
-	uchar dirs = PIND << 5;
+/*	uchar dirs = PIND;
+	dirs <<= 5;
 	// would be faster with bst/bld
 	dirs |= (PINB & 0x1) ? 8 : 0;
+*/
+	uchar dirs=0;
+	dirs |= PINB & 0x1;
+	dirs <<= 1;
+
+	dirs |= (PIND & 0x80) ? 1 : 0;
+	dirs <<= 1;
+	dirs |= (PIND & 0x40) ? 1 : 0;
+	dirs <<= 1;
+	dirs |= (PIND & 0x20) ? 1 : 0;
 
 	reportbuffer[2] = dpad[dirs];
 
-	//other buttons are scattered around, mostly along C0-5 (face buttons)
-	//also D0-2
-	if (!(PINC & (1 << 5)))
-		reportbuffer[1] = 0x10;
-	else
-		reportbuffer[1] = 0;
-
-	if (!(PINC & (1 << 4))) {
-		reportbuffer[0] = 0x4;
-		reportbuffer[12] = 0xFF;
-	} else {
-		reportbuffer[0] = 0;
-		reportbuffer[12] = 0;
+#define MAP(key, bit, block) \
+	if (key) { \
+		reportbuffer[0] |= (1 << bit); \
+		reportbuffer[block] = 0xFF; \
 	}
 
+	//so much neater than the asm alternative
+	MAP(IN_SQ, 0, 14);
+	MAP(IN_X,  1, 13);
+	MAP(IN_CI, 2, 12);
+	MAP(IN_TR, 3, 11);
+	MAP(IN_L1, 4, 15);
+	MAP(IN_R1, 5, 16);
+	MAP(IN_L2, 6, 17);
+	MAP(IN_R2, 7, 18);
+
+#undef MAP
+
+	if (IN_ST)
+		reportbuffer[1] |= 2;
+	if (IN_SE)
+		reportbuffer[1] |= 1;
+
+#ifndef PS_MACRO
+	if (IN_PS)
+		reportbuffer[1] |= 0x10;
+#else
+	//start + select
+	if (reportbuffer[1] == 3)
+		reportbuffer[1] = 0x10;
+#endif
+
+	return;
+}
+
+void ioInit() {
+	//set pull-ups on all the input pins
+	// D0-D2, D5-D7
+	// 11100111
+	PORTD = 0xE7;
+
+	// C0-C5
+	// 00111111
+	PORTC = 0x3F;
+
+	// B0, B1, B2
+	PORTB = 0x7;
 	return;
 }
 
@@ -257,6 +336,7 @@ int main() {
 	//blah blah init
 	
 	initReport();
+	ioInit();
 	usbInit();
 	sei();
 	
