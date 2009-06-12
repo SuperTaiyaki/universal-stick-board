@@ -158,4 +158,10 @@ MEMORY CARD PROBLEM
 	-Memory card communication appears to follow controller communication
 	-4 bytes if MC is connected, 1 byte if not
 		-ATT line does not move
+		-means MC is ACKing just fine
+		-send FF instead of 41 -> still 5 bytes
+		-send FF instead of 5A -> 3 bytes, retry?
 
+-Theory: full transaction is 350us (ATT_ to ATT^), glitchy transaction follows
+	-therefore, ignore ATT for the next 350us
+	-holdoff for 0.8ms causes neither memory card to read

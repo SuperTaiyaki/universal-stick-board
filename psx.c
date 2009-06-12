@@ -225,12 +225,22 @@ void psx_main() {
 	psx_init();
 	//wait for the start of the next packet
 	
+	uchar holdoff = 0;
+
 	while(1) {
 		//both output pins hi-Z
 		//during the transition they're pulled up (mostly safe)
 
 		disable_data();
 		disable_ack();
+
+		if (holdoff) {
+			sbi(PORTB, 1);
+			_delay_ms(0.8);
+			holdoff = 0;
+			cbi(PORTB, 1);
+		}
+
 
 		wait_attH();
 
@@ -309,6 +319,7 @@ void psx_main() {
 
 		
 		xfer_byte(PSX1);
+		holdoff = 1;
 
 		delay_ack();
 		continue;
