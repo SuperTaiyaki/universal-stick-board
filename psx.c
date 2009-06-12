@@ -27,7 +27,7 @@
 typedef unsigned char uchar;
 
 //the sequence of bytes the PSX will receive
-static uchar bytes[] = {0xFF, 0x41, 0x5A, 0xFF, 0xFF}; //41 or 82???
+//static uchar bytes[] = {0xFF, 0x41, 0x5A, 0xFF, 0xFF}; //41 or 82???
 //static uchar bytes[] = {0x33, 0x82, 0x5A, 0xFF, 0xFF}; //more interesting byte 0
 
 #define BYTE0 0xFF
@@ -35,8 +35,8 @@ static uchar bytes[] = {0xFF, 0x41, 0x5A, 0xFF, 0xFF}; //41 or 82???
 #define BYTE2 0x5A
 
 
-static uchar *PSX0 = &bytes[3];
-static uchar *PSX1 = &bytes[4]; //convenience stuff
+static uchar PSX0;
+static uchar PSX1; //convenience stuff
 
 //why are these _functions?
 void delay_ack() {
@@ -46,56 +46,64 @@ void delay_ack() {
 
 void delay_wait() {
 	//delay 10us
-	_delay_us(10);
+//	_delay_us(10);
+	_delay_us(2);
+	DATA_UP();
+	_delay_us(8);
 }
 
 //wait for ATT to go low
 //could set an interrupt, but meh
 
-void wait_attL() {
+inline void wait_attL() {
 	while (PSX_ATT);
 	return;
 }
 
-void wait_attH() {
+inline void wait_attH() {
 	while (!PSX_ATT);
 	return;
 }
 
 inline void do_ack() {
 	//call after SPI transmission has finished
-//	delay_wait();
-//	if (PSX_ATT)
-//		return;
-	_delay_us(2);
-	DATA_UP();
-	_delay_us(8);
+	delay_wait();
+	if (PSX_ATT)
+		return;
 	
 	ACK_DOWN();
 	delay_ack();
 	ACK_UP();
-	//using DDRB to use low/Hi-Z
 	return;
 }
 
-uchar nextbit;
-uchar tripped = 0;
+uchar recv_byte() {
+	uchar out = 0;
+	int i;
+	for (i = 8;i;i--) {
+		out >>= 1;
+		while (PINB & (1 << 5) && !(PSX_ATT));
+		if (PSX_ATT) {
+			return 0;
+		}
+		//clock is down, move the first bit
 
-ISR(PCINT0_vect) {
+		while (!(PINB & (1 << 5)) && !(PSX_ATT));
 
-	if (nextbit)
-		DATA_UP();
-	else
-		DATA_DOWN();
-	tripped = 1;
-	return;
+		if (PSX_ATT) {
+			return 0;
+		}
+		// read
+		// SPI is LSB first, so stick it at the top and shift down
+		// this might reverse values compared to AVR USI
+		out |= (PINB & (1 << 3)) << 4;
+	}
+	return out;
 }
 
-// TODO: This is spitting out the wrong values. It's not reversed, but maybe
-// shifted one.
 uchar xfer_byte(uchar byte) {
 	uchar out = 0;
-	sbi(PORTB, 1);
+	sbi(PORTB, 1); //DEBUG
 	//simulate the USI.
 	//SPI doesn't work because the SS line is being used.
 	
@@ -113,9 +121,11 @@ uchar xfer_byte(uchar byte) {
 	int i;
 	for (i = 8;i;i--) {
 		out >>= 1;
-		while (PINB & (1 << 5));
-		if (PSX_ATT)
+		while (PINB & (1 << 5) && !(PSX_ATT));
+		if (PSX_ATT) {
+			cbi(PORTB, 1); //DEBUG
 			return 0;
+		}
 		//clock is down, move the first bit
 		if (byte & 0x1)
 			DATA_UP();
@@ -123,16 +133,18 @@ uchar xfer_byte(uchar byte) {
 			DATA_DOWN();
 		byte >>= 1;
 
-		while (!(PINB & (1 << 5)));
+		while (!(PINB & (1 << 5)) && !(PSX_ATT));
 
-		if (PSX_ATT)
+		if (PSX_ATT) {
+			cbi(PORTB, 1); //DEBUG
 			return 0;
+		}
 		// read
 		// SPI is LSB first, so stick it at the top and shift down
 		// this might reverse values compared to AVR USI
 		out |= (PINB & (1 << 3)) << 4;
 	}
-	cbi(PORTB, 1);
+	cbi(PORTB, 1); //DEBUG
 	return out;
 }
 
@@ -141,6 +153,7 @@ void psx_init() {
 	// D0-D2, D5-D7
 	// 11100111
 	// maybe faster transitions?
+	// stop trying to disable pull-up. The buttons stop working!
 //	MCUCR |= (1 << PUD);
 	PORTD = 0xE7;
 
@@ -150,52 +163,29 @@ void psx_init() {
 
 	// B0, B1, B2
 	PORTB = 0x7;
-/*
-	//but a few more things
-	//D3 (ACK) and B4 (MISO) are actually outputs
-	//leave them hi (hi-z) on idle
-	cbi(DDRD, 3);
-	cbi(DDRB, 4);
-	cbi(PORTD, 3);
-	cbi(PORTB, 4);
-
-	//ACK (D4) = hi-z input
-	cbi(DDRD, 4);
-	cbi(PORTD, 4);
-
-	//MOSI (B3) = hi-z input
-	cbi(DDRB, 3);
-	cbi(PORTB, 3);
-	
-	
-	//SCK (B5) = hi-z input
-	cbi(DDRB, 5);
-	cbi(PORTB, 5);
-*/
-//	sbi(DDRB, 4);
 	
 	//D3 = ACK output
 	sbi(DDRD, 3);
 	sbi(PORTD, 3);
 
 	//B1 = debug output
-	sbi(DDRB, 1);
+	sbi(DDRB, 1); //DEBUG
 }
 
 //this function probably needs to be timed, or at least time-counted... or just
 //run a timer over it.
 //seems to be fairly slow?
 void update_input() {
-	*PSX0 = *PSX1 = 0xff;
+	PSX0 = PSX1 = 0xff;
 
 #define MAP(key, byte, bit) if (key)\
-	*byte &= ~(1 << bit);
+	byte &= ~(1 << bit);
 
 	MAP(IN_SQ, PSX1, 7);
 	MAP(IN_X,  PSX1, 6);
 	MAP(IN_CI, PSX1, 5);
 	MAP(IN_TR, PSX1, 4);
-//	MAP(IN_R1, PSX1, 3);
+//	MAP(IN_R1, PSX1, 3); //DEBUG because it's being used as a dbg output
 	MAP(IN_L1, PSX1, 2);
 	MAP(IN_R2, PSX1, 1);
 	MAP(IN_L2, PSX1, 0);
@@ -209,39 +199,88 @@ void update_input() {
 	// for DC stick set up macros for stuff
 }
 
+inline void enable_data() {
+	DATA_UP();
+			sbi(DDRB, 4);
+
+}
+
+inline void enable_ack() {
+	ACK_UP();
+			sbi(DDRD, 3);
+
+}
+
+inline void disable_data() {
+	cbi(DDRB, 4);
+		DATA_DOWN();
+}
+
+inline void disable_ack() {
+	cbi(DDRD, 3);
+		ACK_DOWN();
+}
+
+
 void psx_main() {
 	psx_init();
-	update_input();
 	//wait for the start of the next packet
 	
 	while(1) {
-		cbi(DDRB, 4);
+		//both output pins hi-Z
+		//during the transition they're pulled up (mostly safe)
+
+		disable_data();
+		disable_ack();
+
 		wait_attH();
 
 		wait_attL();
-		sbi(DDRB, 4);
-		//wake up the SPI
+
+		//there _should_ be enough time for this here. probably.
 
 		update_input();
-		if (xfer_byte(bytes[0]) != 0x1) {
+
+		//first byte is sent as 0xFF, so don't activate the output yet
+		if (recv_byte() != 0x1) {
+			//could be wrong value because PSX sent something wrong,
+			//or because ATT went high
+			if (PSX_ATT)
+				continue;
+
+			enable_data();
+			enable_ack();
+			//in an abort, still respond properly
+
 			goto abort;
 		}
 //		xfer_byte(BYTE0);
 		if (PSX_ATT)
 			continue;
+		//good so far, enable the ACK line
+		ACK_UP();
+		sbi(DDRD, 3);
+
 		do_ack();
 		if (PSX_ATT)
 			continue;
-		if (xfer_byte(bytes[1]) != 0x42) { //palindrome
+
+		//all clear, enable the DATA line
+		enable_data();
+
+		if (xfer_byte(BYTE1) != 0x42) { //palindrome
+			if (PSX_ATT)
+				continue;
+			// all lines are already active
 			goto abort;
 		}
 	
-//		xfer_byte(BYTE1);
 		if (PSX_ATT)
-			continue;
+				continue;
 		do_ack();
 		if (PSX_ATT)
-			continue;	
+			continue;
+
 		xfer_byte(BYTE2);
 		if (PSX_ATT)
 			continue;
@@ -249,29 +288,37 @@ void psx_main() {
 		if (PSX_ATT)
 			continue;	
 	
-		xfer_byte(bytes[3]);
-//		if (PSX_ATT)
-//			continue;
-		do_ack();
-//		if (PSX_ATT)
-//			continue;
-
-		xfer_byte(bytes[4]);
-		delay_wait(); //don't change MISO too quickly
-
+		xfer_byte(PSX0);
 		if (PSX_ATT)
+			continue;
+		do_ack();
+		if (PSX_ATT)
+			continue;
+
+		xfer_byte(PSX1);
+		delay_wait(); //don't change MISO too quickly
+//		about 6-7ms between last clock and ATT going high
+//		_delay_us(3);
+
+//		if (PSX_ATT)
 			continue; //done
+		//disable the output line
 		
+		disable_data();
+
+		//something to try: stop the transmission here (i.e. outright
+		//abort)
 		//if it hasn't gone low by here ACK it
 		DATA_UP();
 		ACK_DOWN();
 		delay_ack();
 		ACK_UP();
 
-		
+		delay_ack();
 abort:
 		while (!PSX_ATT) {
-			xfer_byte(0);
+	//		xfer_byte(0);
+			recv_byte();
 			if (PSX_ATT)
 				break;
 			do_ack();
