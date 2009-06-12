@@ -9,13 +9,13 @@
 //EVERYTHING.
 #define PSX_ATT (PIND & (1 << 4))
 #define PSX_ACK (PIND & (1 << 3))
-/*
+
 #define ACK_DOWN() sbi (DDRD, 3)
 #define ACK_UP() cbi(DDRD, 3)
-*/
 
-#define ACK_DOWN() cbi(PORTD, 3)
-#define ACK_UP() sbi(PORTD, 3)
+
+//#define ACK_DOWN() cbi(PORTD, 3)
+//#define ACK_UP() sbi(PORTD, 3)
 
 /*
 #define DATA_DOWN() sbi(DDRB, 4)
@@ -165,8 +165,8 @@ void psx_init() {
 	PORTB = 0x7;
 	
 	//D3 = ACK output
-	sbi(DDRD, 3);
-	sbi(PORTD, 3);
+//	sbi(DDRD, 3);
+//	sbi(PORTD, 3);
 
 	//B1 = debug output
 	sbi(DDRB, 1); //DEBUG
@@ -181,44 +181,43 @@ void update_input() {
 #define MAP(key, byte, bit) if (key)\
 	byte &= ~(1 << bit);
 
-	MAP(IN_SQ, PSX1, 7);
+//	MAP(IN_SQ, PSX1, 7);
 	MAP(IN_X,  PSX1, 6);
 	MAP(IN_CI, PSX1, 5);
-	MAP(IN_TR, PSX1, 4);
+//	MAP(IN_TR, PSX1, 4);
 //	MAP(IN_R1, PSX1, 3); //DEBUG because it's being used as a dbg output
-	MAP(IN_L1, PSX1, 2);
-	MAP(IN_R2, PSX1, 1);
-	MAP(IN_L2, PSX1, 0);
+//	MAP(IN_L1, PSX1, 2);
+//	MAP(IN_R2, PSX1, 1);
+//	MAP(IN_L2, PSX1, 0);
 
 	MAP(IN_LT, PSX0, 7);
 	MAP(IN_DN, PSX0, 6);
 	MAP(IN_RT, PSX0, 5);
 	MAP(IN_UP, PSX0, 4);
-	MAP(IN_ST, PSX0, 3);
-	MAP(IN_SE, PSX0, 0);
+//	MAP(IN_ST, PSX0, 3);
+//	MAP(IN_SE, PSX0, 0);
 	// for DC stick set up macros for stuff
 }
 
 inline void enable_data() {
 	DATA_UP();
-			sbi(DDRB, 4);
+	sbi(DDRB, 4);
 
 }
 
 inline void enable_ack() {
-	ACK_UP();
-			sbi(DDRD, 3);
-
+//	ACK_UP();
+//	sbi(DDRD, 3);
 }
 
 inline void disable_data() {
 	cbi(DDRB, 4);
-		DATA_DOWN();
+	DATA_DOWN();
 }
 
 inline void disable_ack() {
-	cbi(DDRD, 3);
-		ACK_DOWN();
+//	cbi(DDRD, 3);
+//	ACK_DOWN();
 }
 
 
@@ -236,7 +235,6 @@ void psx_main() {
 		wait_attH();
 
 		wait_attL();
-
 		//there _should_ be enough time for this here. probably.
 
 		update_input();
@@ -248,18 +246,21 @@ void psx_main() {
 			if (PSX_ATT)
 				continue;
 
+#if 0
 			enable_data();
 			enable_ack();
 			//in an abort, still respond properly
 
 			goto abort;
+#endif
 		}
-//		xfer_byte(BYTE0);
+
 		if (PSX_ATT)
 			continue;
 		//good so far, enable the ACK line
-		ACK_UP();
-		sbi(DDRD, 3);
+
+
+		enable_ack();
 
 		do_ack();
 		if (PSX_ATT)
@@ -272,7 +273,7 @@ void psx_main() {
 			if (PSX_ATT)
 				continue;
 			// all lines are already active
-			goto abort;
+		//	goto abort;
 		}
 	
 		if (PSX_ATT)
@@ -281,22 +282,37 @@ void psx_main() {
 		if (PSX_ATT)
 			continue;
 
+
 		xfer_byte(BYTE2);
 		if (PSX_ATT)
 			continue;
 		do_ack();
 		if (PSX_ATT)
 			continue;	
-	
+
+		//continue here works
 		xfer_byte(PSX0);
-		if (PSX_ATT)
+/*		disable_data();
+		disable_ack();
+		recv_byte();
+*/		if (PSX_ATT)
 			continue;
+
+//		continue; //DEBUG
+		//continue here doesn't work
+		
 		do_ack();
+
+
 		if (PSX_ATT)
 			continue;
 
+		
 		xfer_byte(PSX1);
-		delay_wait(); //don't change MISO too quickly
+
+		delay_ack();
+		continue;
+//		delay_wait(); //don't change MISO too quickly
 //		about 6-7ms between last clock and ATT going high
 //		_delay_us(3);
 

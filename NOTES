@@ -119,9 +119,9 @@ pinout: (mega88)
 
 15: R1 (B1)
 16: R2 (B2)
-17: MOSI
-18: MISO
-19: SCK
+17: MOSI (B3)
+18: MISO (B4)
+19: SCK (B5)
 20: VCC
 21: NC
 22: GND
@@ -147,3 +147,15 @@ V-USB: http://www.obdev.at/products/vusb/
 UPCB: SRK somewhere
 USB in a nutshell: http://www.beyondlogic.org/usbnutshell/usb1.htm
 more usb: http://www.usbmadesimple.co.uk/ums_4.htm
+
+
+MEMORY CARD PROBLEM
+-With avr plugged into port 1 memory card port 1 doesn't list
+	-main looped commented out (after attL) works fine (go to MC screen with
+	HRAP, switch immediately after)
+	-Just reading in the 1st byte (no ACK), doesn't work
+	-Problem seems to occur after ACKing the 4th byte (PSX0)
+	-Memory card communication appears to follow controller communication
+	-4 bytes if MC is connected, 1 byte if not
+		-ATT line does not move
+
