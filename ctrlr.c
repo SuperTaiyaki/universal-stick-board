@@ -359,15 +359,18 @@ int main() {
 	// pull up CLK, wait 16ms, if it hasn't gone down then assume it's not
 	// PSX
 	// pull up clock
-	
+	//actually this isn't reliable
+	//if the controller is sitting there while the console boots it will
+	//read wrongly
+	//try watching the line staying high?
 	//B1 is power LED
 	//B2 is USB status
 /*	
 	sbi(PORTB, 1);
 	sbi(PORTB, 2);
 */
-	sbi(DDRB, 1);
-	sbi(DDRB, 2);
+//	sbi(DDRB, 1);
+//	sbi(DDRB, 2);
 
 	uchar psx = 0;
 	sbi(PORTB, 5);
@@ -381,11 +384,9 @@ int main() {
 	while(!(TIFR0 & (1 << OCF0A))) {
 		if (!(PINB & (1 << 5))) {
 			psx = 1;
-			cbi(DDRB, 2);
 			break;
 		}
 	}
-//	psx =0 ;
 	TCCR0B = 0; //stop the counter
 	PORTB = 0;
 	if (psx)
