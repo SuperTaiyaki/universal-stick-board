@@ -77,6 +77,7 @@ inline void do_ack() {
 	return;
 }
 
+#if 0 //attempt at interrupt-driven stuff (didn't work)
 uchar usibyte;
 uchar usicount;
 uchar usiflags;
@@ -100,6 +101,8 @@ ISR(PCINT0_vect) {
 	}
 	sbi(PORTD, 1);
 }
+
+#endif
 
 uchar recv_byte() {
 	uchar out = 0;
@@ -127,7 +130,7 @@ uchar recv_byte() {
 
 uchar xfer_byte(uchar byte) {
 	uchar out = 0;
-	sbi(PORTB, 1); //DEBUG
+//	sbi(PORTB, 1); //DEBUG
 	//simulate the USI.
 	//SPI doesn't work because the SS line is being used.
 	
@@ -165,7 +168,7 @@ uchar xfer_byte(uchar byte) {
 			DATA_DOWN();
 
 		if (PSX_ATT) {
-			cbi(PORTB, 1); //DEBUG
+//			cbi(PORTB, 1); //DEBUG
 			return 0;
 		}
 		byte >>= 1;
@@ -173,7 +176,7 @@ uchar xfer_byte(uchar byte) {
 		while (!(PINB & (1 << 5)) && !(PSX_ATT));
 
 		if (PSX_ATT) {
-			cbi(PORTB, 1); //DEBUG
+//			cbi(PORTB, 1); //DEBUG
 			return 0;
 		}
 		// read
@@ -183,7 +186,7 @@ uchar xfer_byte(uchar byte) {
 	}
 #endif
 
-	cbi(PORTB, 1); //DEBUG
+//	cbi(PORTB, 1); //DEBUG
 	return out;
 }
 
@@ -214,7 +217,7 @@ void psx_init() {
 	sbi(PCICR, PCIE0);
 	sei();
 
-	sbi(DDRB, 1); //DEBUG
+//	sbi(DDRB, 1); //DEBUG
 }
 
 //this function probably needs to be timed, or at least time-counted... or just
@@ -227,10 +230,10 @@ void update_input() {
 	byte &= ~(1 << bit);
 
 	MAP(IN_SQ, PSX1, 7);
-	MAP(IN_X,  PSX1, 6);
-	MAP(IN_CI, PSX1, 5);
+//	MAP(IN_X,  PSX1, 6); // X and CI are handled with the macros
+//	MAP(IN_CI, PSX1, 5);
 	MAP(IN_TR, PSX1, 4);
-//	MAP(IN_R1, PSX1, 3); //DEBUG because it's being used as a dbg output
+	MAP(IN_R1, PSX1, 3);
 	MAP(IN_L1, PSX1, 2);
 	MAP(IN_R2, PSX1, 1);
 	MAP(IN_L2, PSX1, 0);
@@ -239,9 +242,20 @@ void update_input() {
 	MAP(IN_DN, PSX0, 6);
 	MAP(IN_RT, PSX0, 5);
 	MAP(IN_UP, PSX0, 4);
+	// for DC stick set up macros for stuff
+#ifndef NO_SELECT
 	MAP(IN_ST, PSX0, 3);
 	MAP(IN_SE, PSX0, 0);
-	// for DC stick set up macros for stuff
+#else //start and select macros
+	if (IN_ST) {
+		MAP(IN_X,  PSX0, 3);
+		MAP(IN_CI, PSX0, 0), 
+	} else {
+		MAP(IN_X,  PSX1, 6);
+		MAP(IN_CI, PSX1, 5);
+	}
+#endif
+
 }
 
 inline void enable_data() {
@@ -349,17 +363,10 @@ void psx_main() {
 		if (PSX_ATT)
 			continue;	
 
-		//continue here works
 		xfer_byte(PSX0);
-/*		disable_data();
-		disable_ack();
-		recv_byte();
-*/		if (PSX_ATT)
+		if (PSX_ATT)
 			continue;
 
-//		continue; //DEBUG
-		//continue here doesn't work
-		
 		do_ack();
 
 

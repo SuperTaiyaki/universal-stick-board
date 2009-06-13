@@ -58,7 +58,7 @@ PROGMEM char usbDescriptorConfiguration[] = {
          0x81,          //endpoint address EP1 IN
          0x03,          //transfer style: interrupt
          0x08, 0x00,    //max packet size : 64 bytes
-         0x04,          //interval: 4ms 
+         0x01,          //interval: 1ms (as in dualshock3)
 
 };
 
@@ -221,21 +221,38 @@ void doReport() {
 	}
 
 	//so much neater than the asm alternative
-	MAP(IN_SQ, 0, 14);
-	MAP(IN_X,  1, 13);
-	MAP(IN_CI, 2, 12);
 	MAP(IN_TR, 3, 11);
 	MAP(IN_L1, 4, 15);
 	MAP(IN_R1, 5, 16);
 	MAP(IN_L2, 6, 17);
 	MAP(IN_R2, 7, 18);
 
-#undef MAP
 
+#ifndef NO_SELECT
+	MAP(IN_SQ, 0, 14);
+	MAP(IN_X,  1, 13);
+	MAP(IN_CI, 2, 12);
+	
 	if (IN_ST)
 		reportbuffer[1] |= 2;
 	if (IN_SE)
 		reportbuffer[1] |= 1;
+#else
+	//start + select + PS macros
+	if (IN_ST) {
+		if (IN_X)
+			reportbuffer[1] |= 2;
+		if (IN_CI)
+			reportbuffer[1] |= 1;
+		if (IN_SQ)
+			reportbuffer[1] |= 0x10;
+	} else {
+		MAP(IN_SQ, 0, 14);
+		MAP(IN_X,  1, 13);
+		MAP(IN_CI, 2, 12);
+	}
+#endif
+
 
 #ifndef PS_MACRO
 	if (IN_PS)
@@ -245,6 +262,8 @@ void doReport() {
 	if (reportbuffer[1] == 3)
 		reportbuffer[1] = 0x10;
 #endif
+
+#undef MAP
 
 	return;
 }

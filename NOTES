@@ -173,7 +173,9 @@ PS2 issue:
 -possibly falling over into the next clock?
 -1st 3 bytes appear to be identical to sat2ps2 (checked on scope)
 	-remove PSX_ATT checking in xfer_byte?
+-Solution was to stop ACKing on a bad command
 
+----------------------------------------------------------
 parts list:
 atmega88-20PU $3.78
 2x22pf cap
@@ -183,5 +185,52 @@ usb plug
 connector for PSX
 resistors
 protoboard
+28pin socket (NARROW)
+heatshrink
 
+modular socket(s)
+terminal strips?
+8-pin DIN plug x2, sockets x2
+2x USB-B sockets
+
+
+----------------------------------------------------------
+connect stick via ...?
+USB connector plug thingo	
+	-USB-B?
+	-ideally mini-b, loads of cables lying around
+	-for HRAP/whatever with hub, ?
+	-for DC stick, just USB plug?
+cable connectors...?
+DIN too loose?
+
+-HRAP Custom:
+	-new PS button (also for 360)
+	-USB only (internal hub)
+	-Don't touch PS wire? or make detachable?
+	-DIN for PSX cable (share with agetec stick)
+
+-AGETEC custom:
+	-DB9 for saturn (lying around anyway)
+	-XLR for DC? (freaking expensive...)
+	-DIN for PSX?
+	-possible to share a 5-pin XLR for DC?
+		-probably not
+
+	-Few buttons unwired... use for disable? (probably won't work)
+	-Custom button...?
+
+-NAMCO Custom:
+	-All buttons
+	-h/w PS button
+	-Compact as possible
+	-PSX cable is modular
+	-case is all plastic
+	(do I need to buy a modular plug...? or just a socket?)
+
+
+DC: 4 wires
+USB: 4 wires
+Saturn: 8 wires
+PSX: 7 wires
 
