@@ -82,6 +82,7 @@ uchar usicount;
 uchar usiflags;
 
 ISR(PCINT0_vect) {
+	cbi(PORTD, 1);
 	if (PINB & (1 << 5)) {
 		if (PINB & (1 << 3)) {
 			usibyte |= 0x80;
@@ -89,6 +90,7 @@ ISR(PCINT0_vect) {
 		//clocked up, read
 		usicount--;
 	} else {
+		//this needs to happen as early as possible
 		if (usibyte & 1)
 			DATA_UP();
 		else
@@ -96,7 +98,7 @@ ISR(PCINT0_vect) {
 		usibyte >>= 1;
 		//clocked down, write
 	}
-
+	sbi(PORTD, 1);
 }
 
 uchar recv_byte() {
@@ -140,20 +142,32 @@ uchar xfer_byte(uchar byte) {
 	
 	//transmissions in both directions are the reverse of AVR USI
 	//bytes are reversed to match.
-	
+#if 0
+	usibyte = byte;
+	usicount = 8;
+	//start the interrupt thing...
+	sbi(PCMSK0, PCINT5);
+	while (!PSX_ATT && usicount);
+	cbi(PCMSK0, PCINT5);
+	cbi(PORTB, 1);
+	return usibyte;
+#else
 	int i;
 	for (i = 8;i;i--) {
 		out >>= 1;
-		while (PINB & (1 << 5) && !(PSX_ATT));
-		if (PSX_ATT) {
-			cbi(PORTB, 1); //DEBUG
-			return 0;
-		}
+		while (PINB & (1 << 5));
+
 		//clock is down, move the first bit
+		//check ATT afterwards for speed
 		if (byte & 0x1)
 			DATA_UP();
 		else
 			DATA_DOWN();
+
+		if (PSX_ATT) {
+			cbi(PORTB, 1); //DEBUG
+			return 0;
+		}
 		byte >>= 1;
 
 		while (!(PINB & (1 << 5)) && !(PSX_ATT));
@@ -167,6 +181,8 @@ uchar xfer_byte(uchar byte) {
 		// this might reverse values compared to AVR USI
 		out |= (PINB & (1 << 3)) << 4;
 	}
+#endif
+
 	cbi(PORTB, 1); //DEBUG
 	return out;
 }
@@ -192,6 +208,12 @@ void psx_init() {
 //	sbi(PORTD, 3);
 
 	//B1 = debug output
+	
+	//SCK interrupt
+
+	sbi(PCICR, PCIE0);
+	sei();
+
 	sbi(DDRB, 1); //DEBUG
 }
 
@@ -274,6 +296,8 @@ void psx_main() {
 
 		//first byte is sent as 0xFF, so don't activate the output yet
 		if (recv_byte() != 0x1) {
+			continue; //need to do this or PS2 won't work
+
 			//could be wrong value because PSX sent something wrong,
 			//or because ATT went high
 			if (PSX_ATT)
@@ -292,7 +316,6 @@ void psx_main() {
 			continue;
 		//good so far, enable the ACK line
 
-
 		enable_ack();
 
 		do_ack();
@@ -303,10 +326,13 @@ void psx_main() {
 		enable_data();
 
 		if (xfer_byte(BYTE1) != 0x42) { //palindrome
+			continue; //make PS2 work
+#if 0
 			if (PSX_ATT)
 				continue;
 			// all lines are already active
-		//	goto abort;
+			goto abort;
+#endif
 		}
 	
 		if (PSX_ATT)
@@ -342,7 +368,7 @@ void psx_main() {
 
 		
 		xfer_byte(PSX1);
-		holdoff = 1;
+//		holdoff = 1;
 
 //		delay_ack();
 //		continue;
@@ -367,11 +393,11 @@ void psx_main() {
 //		delay_ack();
 abort:
 		while (!PSX_ATT) {
-	//		xfer_byte(0);
-			recv_byte();
+			do_ack();
 			if (PSX_ATT)
 				break;
-			do_ack();
+			xfer_byte(0);
+	//		recv_byte();
 		}
 
 	}
