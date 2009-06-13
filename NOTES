@@ -121,7 +121,7 @@ pinout: (mega88)
 16: R2 (B2)
 17: MOSI (B3)
 18: MISO (B4)
-19: SCK (B5)
+19: SCK (B5) (pull down with big resistor)
 20: VCC
 21: NC
 22: GND
@@ -165,3 +165,23 @@ MEMORY CARD PROBLEM
 -Theory: full transaction is 350us (ATT_ to ATT^), glitchy transaction follows
 	-therefore, ignore ATT for the next 350us
 	-holdoff for 0.8ms causes neither memory card to read
+		-Forgot to disable data and ack before holdoff
+	-correct.
+
+PS2 issue:
+-DATA edges are very close to clock rising edges
+-possibly falling over into the next clock?
+-1st 3 bytes appear to be identical to sat2ps2 (checked on scope)
+	-remove PSX_ATT checking in xfer_byte?
+
+parts list:
+atmega88-20PU $3.78
+2x22pf cap
+16mhz crystal ($0.40)
+2x diodes
+usb plug
+connector for PSX
+resistors
+protoboard
+
+

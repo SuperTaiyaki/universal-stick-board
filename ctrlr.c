@@ -363,6 +363,7 @@ int main() {
 	//if the controller is sitting there while the console boots it will
 	//read wrongly
 	//try watching the line staying high?
+	//SCK will be high... keep an eye on it
 	//B1 is power LED
 	//B2 is USB status
 /*	
@@ -373,7 +374,7 @@ int main() {
 //	sbi(DDRB, 2);
 
 	uchar psx = 0;
-	sbi(PORTB, 5);
+//	sbi(PORTB, 5);
 	//going to stall for 1 frame = 16ms = 256k clocks
 	//timer1 with maximum prescaler (1024) is 250 cycles
 	//TCCR0A = 11000000 (set OC0A on match)
@@ -382,13 +383,13 @@ int main() {
 	TCCR0B = 0x05;
 	OCR0A = 250;
 	while(!(TIFR0 & (1 << OCF0A))) {
-		if (!(PINB & (1 << 5))) {
+		if ((PINB & (1 << 5))) {
 			psx = 1;
 			break;
 		}
 	}
 	TCCR0B = 0; //stop the counter
-	PORTB = 0;
+//	PORTB = 0;
 	if (psx)
 		psx_main();
 	else

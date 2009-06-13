@@ -77,6 +77,28 @@ inline void do_ack() {
 	return;
 }
 
+uchar usibyte;
+uchar usicount;
+uchar usiflags;
+
+ISR(PCINT0_vect) {
+	if (PINB & (1 << 5)) {
+		if (PINB & (1 << 3)) {
+			usibyte |= 0x80;
+		}
+		//clocked up, read
+		usicount--;
+	} else {
+		if (usibyte & 1)
+			DATA_UP();
+		else
+			DATA_DOWN();
+		usibyte >>= 1;
+		//clocked down, write
+	}
+
+}
+
 uchar recv_byte() {
 	uchar out = 0;
 	int i;
@@ -111,7 +133,8 @@ uchar xfer_byte(uchar byte) {
 	//MISO is output (PB4)
 	//MOSI is input (PB3)
 	//at 500khz (ps2 clock) one clock period is 2e-6s.
-	//one clock cycle at 16mhz is 6.3e-6s... lots of time wasting in here
+	//one clock cycle at 16mhz is 6.3e-8s... lots of time wasting in here
+	//15 cycles per half clk
 	
 	//clock starts out high, wait for it to drop...
 	
@@ -181,21 +204,21 @@ void update_input() {
 #define MAP(key, byte, bit) if (key)\
 	byte &= ~(1 << bit);
 
-//	MAP(IN_SQ, PSX1, 7);
+	MAP(IN_SQ, PSX1, 7);
 	MAP(IN_X,  PSX1, 6);
 	MAP(IN_CI, PSX1, 5);
-//	MAP(IN_TR, PSX1, 4);
+	MAP(IN_TR, PSX1, 4);
 //	MAP(IN_R1, PSX1, 3); //DEBUG because it's being used as a dbg output
-//	MAP(IN_L1, PSX1, 2);
-//	MAP(IN_R2, PSX1, 1);
-//	MAP(IN_L2, PSX1, 0);
+	MAP(IN_L1, PSX1, 2);
+	MAP(IN_R2, PSX1, 1);
+	MAP(IN_L2, PSX1, 0);
 
 	MAP(IN_LT, PSX0, 7);
 	MAP(IN_DN, PSX0, 6);
 	MAP(IN_RT, PSX0, 5);
 	MAP(IN_UP, PSX0, 4);
-//	MAP(IN_ST, PSX0, 3);
-//	MAP(IN_SE, PSX0, 0);
+	MAP(IN_ST, PSX0, 3);
+	MAP(IN_SE, PSX0, 0);
 	// for DC stick set up macros for stuff
 }
 
@@ -321,13 +344,13 @@ void psx_main() {
 		xfer_byte(PSX1);
 		holdoff = 1;
 
-		delay_ack();
-		continue;
-//		delay_wait(); //don't change MISO too quickly
+//		delay_ack();
+//		continue;
+		delay_wait(); //don't change MISO too quickly
 //		about 6-7ms between last clock and ATT going high
 //		_delay_us(3);
 
-//		if (PSX_ATT)
+		if (PSX_ATT)
 			continue; //done
 		//disable the output line
 		
@@ -341,7 +364,7 @@ void psx_main() {
 		delay_ack();
 		ACK_UP();
 
-		delay_ack();
+//		delay_ack();
 abort:
 		while (!PSX_ATT) {
 	//		xfer_byte(0);
