@@ -22,11 +22,14 @@ PROGMEM char usbDescriptorDevice[] = {
         0x01            //# of possible configurations
 };
 
-//this shouldn't blow up, but it's a few descriptors stuck together
+//there's PSX OUT endpoint is here. Dunno why.
+//it's probably for vibration. Means Sony was already planning it when they made
+//the sixaxis...
 PROGMEM char usbDescriptorConfiguration[] = {
          0x09,                  //size of this desc in bytes
          /*CONFIGURATION*/2, //type of desc
-         0x22,  0x00,           //size of total descriptor
+//         0x22,  0x00,           //size of total descriptor
+         0x29,  0x00,           //size of total descriptor
          0x01,                  //# of interfaces
          0x01,                  //index number of this config
          0x00,                  //config string index
@@ -37,7 +40,7 @@ PROGMEM char usbDescriptorConfiguration[] = {
          /*INTERFACE*/4,             //type of desc //from UPCB headers
          0x00,                  //interface number (ordinal)
          0x00,                  //alternate setting number
-         0x01,                  //number of endpoints (not including EP0)
+         0x02,                  //number of endpoints (not including EP0)
          0x03,                  //Interface class - HID
          0x00,                  //sublass 
          0x00,                  //protocol code - mouse
@@ -52,7 +55,15 @@ PROGMEM char usbDescriptorConfiguration[] = {
          /*USBREPORT*/0x22,                        //Report descriptor type
          0x70, 0x00,    //size of report descriptor
 
-         //endpoint portion
+	 //endpoint portion (3 out, the ???)
+         0x07,          //size of desc in bytes
+         /*ENDPOINT*/5,      //type od desc
+         0x02,          //endpoint address EP2 OUT
+         0x03,          //transfer style: interrupt
+         0x40, 0x00,    //max packet size : 64 bytes
+         0x01,          //interval: 1ms (as in dualshock3)
+         
+	 //endpoint portion (81 in, the main controller)
          0x07,          //size of desc in bytes
          /*ENDPOINT*/5,      //type od desc
          0x81,          //endpoint address EP1 IN
@@ -343,6 +354,10 @@ uchar usbFunctionRead(uchar *data, uchar len) {
 	return len;
 }
 
+void usbFunctionWriteOut(uchar *data, uchar len) {
+	return;
+}
+
 void usb_main() {
 	//blah blah init
 	
@@ -373,19 +388,10 @@ void usb_main() {
 void psx_main();
 
 int main() {
-	// TODO: decide between usb_main and psx_main
-	// maybe wait to see if PSX ATT line goes low, if it doesn't assume USB?
-	// pull up CLK, wait 16ms, if it hasn't gone down then assume it's not
-	// PSX
-	// pull up clock
-	//actually this isn't reliable
-	//if the controller is sitting there while the console boots it will
-	//read wrongly
-	//try watching the line staying high?
-	//SCK will be high... keep an eye on it
-	//B1 is power LED
-	//B2 is USB status
-/*	
+
+	//decide between PSX and USB modes.
+	//If PSX CLK is high assume it's PSX.
+	/*	
 	sbi(PORTB, 1);
 	sbi(PORTB, 2);
 */
