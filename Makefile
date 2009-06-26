@@ -8,7 +8,9 @@
 # This Revision: $Id: Makefile 277 2007-03-20 10:53:33Z cs $
 
 DEVICE = atmega88
-AVRDUDE = avrdude -c stk500v2 -P avrdoper -p $(DEVICE)
+#AVRDUDE = avrdude -c stk500v2 -P avrdoper -p $(DEVICE)
+AVRDUDE = avrdude -p atmega88 -P /dev/parport0 -c dapa
+
 # Choose your favorite programmer and interface above.
 # attiny2313 fuses: -U lfuse:w:0xcf:m -U hfuse:w:0xdd:m
 # atmega 88 fuses: -U lfuse:w:0xff:m -U hfuse:w:0xde:m
@@ -36,7 +38,11 @@ all:	ctrlr.hex
 	$(COMPILE) -S $< -o $@
 
 flash:	all
-	$(AVRDUDE) -U flash:w:main.hex:i
+	$(AVRDUDE) -U flash:w:ctrlr.hex:i
+
+flash_new: all
+	echo Make sure crystal is in.
+	$(AVRUDDE) -U lfuse:w:0xff:m -U hfuse:w:0xde:m -U flash:w:ctrlr.hex:i
 
 
 # Fuse low byte:

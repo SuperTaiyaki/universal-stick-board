@@ -2,7 +2,7 @@
 #include <avr/interrupt.h>
 #include "usbdrv.h"
 #include "mapping.h"
-
+/// {{{ USB descriptors and crap
 //all lifted from UPCB and modified for AVR
 //commented out constants are 0 in V-USB header - probably wrong
 PROGMEM char usbDescriptorDevice[] = {
@@ -152,8 +152,10 @@ const unsigned char PS3USB_String2[] = {
 	75, 0, 32, 0, 72, 0, 105, 0, 103, 0, 104, 0, //36
 	32, 0, 71, 0, 114, 0, 97, 0, 100, 0, 101, 0 }; //48
 */
-#define REPORTBUFFER_SIZE 0x13
 
+// }}}
+#define REPORTBUFFER_SIZE 0x13
+// 0x13 = 19
 static uchar reportbuffer[REPORTBUFFER_SIZE];
 static uchar response[8] = {33, 38,0,0,0,0,0,0};
 static int repbuffer_idx;
@@ -161,7 +163,6 @@ static int repbuffer_idx;
 // map the 4 dpad bits into a hat switch
 // map as on a standard JLF connector... UDLR will do
 // 0xF shouldn't ever be hit
-// ... this is all backwards because the bits are flipped. urgh.
 static const char dpad[] = {
 	      // UDLR
 	0xF,  // 0000
@@ -196,18 +197,10 @@ void initReport() {
 
 void doReport() {
 	initReport();
-	// could be optimized by skipping the analog bits
-	// NYI
-	
-	//B0, pin 12 on a tn2313
-/*	if (PINB & 0x1) {
-		reportbuffer[0] = 0xff;
-	} else {
-		reportbuffer[0] = 0;
-	}*/
 
 	// on the atmega88 the dpad is spread around a bit
 	// D5 D6 D7 B0
+	// this is weird, it doesn't work right.
 /*	uchar dirs = PIND;
 	dirs <<= 5;
 	// would be faster with bst/bld

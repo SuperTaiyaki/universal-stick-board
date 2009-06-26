@@ -5,7 +5,10 @@ AVR + V-USB
 		-Probably a unicode thing
 	-Digital only, analog only... ???
 	-Can probably steal the USB HID report descriptor verbatim
+		-Done.
 	-Where's the ID LED thingo set? Kind of hard to report it back anyway...
+		-Possibly only for stuff with the DS3 ID?
+		-hrm, output pieces in the HID descriptor...
 
 bytes from UPCB:
 	0x13 bytes (header provides many more bytes, for DS3?)
@@ -65,7 +68,7 @@ the host conforms to the standard. The driver will consume CPU cycles for all
 USB messages, even if they address another (low-speed) device on the same bus."
 shouldn't cause problems...
 -for HRAP: 4x direction buttons, 8x face buttons, 2x aux buttons -> 14 lines
--attiny2313 has 20 pins -2 for power -> only 4 lines left... enough for PS3, not for anything else
+-attiny2313 has 20 pins -2 for power -2 crystal -1 reset -> 15 pins left
 -atmega88 has 28 pins -> 12 lines left, enough for anything (sort of)
 -Detect lines. RJ45 has 8 pins, can use location of +5v to figure out which controller to use, or to go Hi-Z (requires one more line per controller...)
 -USB is probably 1-high, rather than 1-low for PSX/saturn
