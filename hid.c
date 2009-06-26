@@ -18,10 +18,8 @@ char usbDescriptorHidReport[] = {
  0x95, 0x03,                                    //     REPORT_COUNT (3)
  0x81, 0x01,                                    //Input something or other --30
  						// Input(Constant Array Absolute
-						// No_Wrap Linear) (why 13+3?)
-						// -> constant, meaning what?
-						// doesn't seem to be included
-						// in the reports... (1x3)
+						// No_Wrap Linear) 
+						// no usage included, so padding
 
  0x05, 0x01,                                    // USAGE_PAGE (Generic Desktop)
  0x25, 0x07,                                    //   LOGICAL_MAXIMUM (7)
@@ -37,7 +35,7 @@ char usbDescriptorHidReport[] = {
  0x95, 0x01,                                    //report count 1
  0x81, 0x01,                                    //Input something or other
 // Constant Array Absolute No_Wrap Linear (constant 4x1)
-//
+//padding
 
  0x26, 0xff, 0x00,                              // LOGICAL_MAXIMUM (255)
  0x46, 0xff, 0x00,                      // PHYSICAL_MAXIMUM (255)  --59
@@ -64,12 +62,14 @@ char usbDescriptorHidReport[] = {
  0x09, 0x2b,  //more usage up to here
  0x95, 0x0c, //report count 12
  0x81, 0x02, //input Data Variable Absolute No_Wrap Linear (8x12)
-//cut to here
+//cut to here (14*2 + 3 = 31 bytes)
  0x0a, 0x21, 0x26, //usage unknown
  0x95, 0x08, //report count 8
  0xb1, 0x02, //feature Data Variable Absolute No_Wrap Linear
  0xc0   // end collection
  };
+
+//new size = 0x51 bytes
 
 //cutting from report results in (19-12) = 8 reports... fits easily.
 
