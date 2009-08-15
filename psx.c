@@ -9,13 +9,13 @@
 //EVERYTHING.
 #define PSX_ATT (PIND & (1 << 4))
 #define PSX_ACK (PIND & (1 << 3))
-
+/*
 #define ACK_DOWN() sbi (DDRD, 3)
 #define ACK_UP() cbi(DDRD, 3)
+*/
 
-
-//#define ACK_DOWN() cbi(PORTD, 3)
-//#define ACK_UP() sbi(PORTD, 3)
+#define ACK_DOWN() cbi(PORTD, 3)
+#define ACK_UP() sbi(PORTD, 3)
 
 /*
 #define DATA_DOWN() sbi(DDRB, 4)
@@ -41,13 +41,13 @@ static uchar PSX1; //convenience stuff
 //why are these _functions?
 void delay_ack() {
 	// somehow delay for 3us
-	_delay_us(3);
+	_delay_us(5);
 }
 
 void delay_wait() {
 	//delay 10us
 //	_delay_us(10);
-	_delay_us(2);
+	_delay_us(8);
 	DATA_UP();
 	_delay_us(8);
 }
@@ -68,9 +68,9 @@ inline void wait_attH() {
 inline void do_ack() {
 	//call after SPI transmission has finished
 	delay_wait();
-	if (PSX_ATT)
+/*	if (PSX_ATT)
 		return;
-	
+*/	
 	ACK_DOWN();
 	delay_ack();
 	ACK_UP();
@@ -158,7 +158,7 @@ uchar xfer_byte(uchar byte) {
 	int i;
 	for (i = 8;i;i--) {
 		out >>= 1;
-		while (PINB & (1 << 5));
+		while (PINB & (1 << 5) && !(PSX_ATT));
 
 		//clock is down, move the first bit
 		//check ATT afterwards for speed
@@ -223,6 +223,7 @@ void psx_init() {
 //this function probably needs to be timed, or at least time-counted... or just
 //run a timer over it.
 //seems to be fairly slow?
+//broken into 2 pieces so the controller protocol crap can happen in between
 void update_input() {
 	PSX0 = PSX1 = 0xff;
 
@@ -246,10 +247,14 @@ void update_input() {
 #ifndef NO_SELECT
 	MAP(IN_ST, PSX0, 3);
 	MAP(IN_SE, PSX0, 0);
+	//no need for macros, do normally
+	MAP(IN_X,  PSX1, 6);
+	MAP(IN_CI, PSX1, 5);
+
 #else //start and select macros
 	if (IN_ST) {
-		MAP(IN_X,  PSX0, 3);
-		MAP(IN_CI, PSX0, 0), 
+		MAP(IN_X,  PSX0, 3); //X -> ST
+		MAP(IN_CI, PSX0, 0); //O -> SE
 	} else {
 		MAP(IN_X,  PSX1, 6);
 		MAP(IN_CI, PSX1, 5);
@@ -265,8 +270,8 @@ inline void enable_data() {
 }
 
 inline void enable_ack() {
-//	ACK_UP();
-//	sbi(DDRD, 3);
+	ACK_UP();
+	sbi(DDRD, 3);
 }
 
 inline void disable_data() {
@@ -275,8 +280,8 @@ inline void disable_data() {
 }
 
 inline void disable_ack() {
-//	cbi(DDRD, 3);
-//	ACK_DOWN();
+	cbi(DDRD, 3);
+	ACK_DOWN();
 }
 
 
@@ -305,6 +310,8 @@ void psx_main() {
 
 		wait_attL();
 		//there _should_ be enough time for this here. probably.
+		//on PS2 20us between ATT down and first CLK
+		//PS1 has about 35us
 
 		update_input();
 
@@ -317,7 +324,7 @@ void psx_main() {
 			if (PSX_ATT)
 				continue;
 
-#if 0
+#if 1
 			enable_data();
 			enable_ack();
 			//in an abort, still respond properly
@@ -341,7 +348,7 @@ void psx_main() {
 
 		if (xfer_byte(BYTE1) != 0x42) { //palindrome
 			continue; //make PS2 work
-#if 0
+#if 1
 			if (PSX_ATT)
 				continue;
 			// all lines are already active

@@ -8,15 +8,17 @@ AVR + V-USB
 		-Done.
 	-Where's the ID LED thingo set? Kind of hard to report it back anyway...
 		-Possibly only for stuff with the DS3 ID?
+			-Yep, DS3 ID stops it giving a number
+			-BUT it doesn't respond at all - needs something else
 		-hrm, output pieces in the HID descriptor...
 
 bytes from UPCB:
 	0x13 bytes (header provides many more bytes, for DS3?)
 	0: buttons... but only 8 bits ???
-		b0 -> 14 = FF (square?)
+		b0 -> 14 = Square 
 		b1 -> 13  (X)
-		b2 -> 12  (circle)   V
-		b3 -> 11  (triangle) ^ may be mixed up
+		b2 -> 12  (Circle)   V
+		b3 -> 11  (Triangle) ^ may be mixed up
 
 		b4 -> 15 (L1)
 		b5 -> 16 (R1)
@@ -140,6 +142,18 @@ reset: 1
 power: 5
 xtal: 2
 
+Stripboard layout:
+
+Left rails have +/-
+Right rail is ? (pull up? pull down?) GND
+Center rail is ? (set to make convenient for PU/PD)
+xtal...?
+from usbconfig.h:
+D+ i- D3 (5) (brown, PU)
+D- is D4 (6) (orange, PD)
+
+
+
 dpad: 4
 buttons: 8 + 2 + 1
 
@@ -177,6 +191,14 @@ PS2 issue:
 -1st 3 bytes appear to be identical to sat2ps2 (checked on scope)
 	-remove PSX_ATT checking in xfer_byte?
 -Solution was to stop ACKing on a bad command
+	-Hrm?
+new PS2 issue:
+-PS1 works, PS2 2P works, ps2 1P:
+	-ATT is raised after ACK
+	-the full transaction proceeds if it's not ACKED
+	-Fiddling with ACK timing doesn't achieve much
+-Is the PSX detection code causing it?
+	-shouldn't be... in theory it's the same as connecting and sitting idle, as the normal code does
 
 ----------------------------------------------------------
 parts list:
