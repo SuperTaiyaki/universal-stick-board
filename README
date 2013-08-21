@@ -1,0 +1,43 @@
+This is code for an Atmel ATMEGA88 for a PS2 and PS3 controller board. It was intended to be built into an arcade stick.
+As far as I know it works fine on real PS1, PS2 and PS3 hardware, as well as PC.
+
+Based on my notes (not checked!) the pinout for an atmega88 is as follows:
+
+1: RST
+2: L1 (D0)
+3: L2 (D1)
+4: PS (D2)
+5: USB- / PSX ACK (D3)
+6: USB+ / PSX ATT (D4)
+7: VCC
+8: GND
+9: XTAL
+10: XTAL
+11: L (D5)
+12: R (D6)
+13: D (D7)
+14: U (B0)
+
+15: R1 (B1)
+16: R2 (B2)
+17: MOSI (B3)
+18: MISO (B4)
+19: SCK (B5) (pull down with big resistor)
+20: VCC
+21: NC
+22: GND
+23: Tr (C0)
+24: Ci (C1)
+25: X  (C2)
+26: Sq (C3)
+27: St (C4)
+28: Sel (C5)
+
+Button names are for the Playstation side. USB- and USB+ are for V-USB. MOSI, MISO, SCK, PSX ACK and PSX ATT are the
+data lines for the Playstation controller connector. At some point I might look up how pull-up and pull-down resistors
+were set up.
+
+There's some stuff in mapping.h that can be configured from the makefile to adjust button mappings. These were hacked
+in to work around mistakes when the boards were installed in physical sticks. I think ICANTREAD was due to buttons being
+connected to the wrong pins, and INVERTTRIGGERS was because of some circuitry required to get the PCB to play nice in
+parallel with an Xbox 360 controller, all crammed inside a Namco PS1 arcade stick.
