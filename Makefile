@@ -9,13 +9,21 @@
 
 DEVICE = atmega88
 #AVRDUDE = avrdude -c stk500v2 -P avrdoper -p $(DEVICE)
-AVRDUDE = avrdude -p atmega88 -P /dev/parport0 -c dapa
+#AVRDUDE = avrdude -p atmega88 -P /dev/parport0 -c dapa
+AVRDUDE = avrdude -p atmega88 -c usbasp
 
 # Choose your favorite programmer and interface above.
 # attiny2313 fuses: -U lfuse:w:0xcf:m -U hfuse:w:0xdd:m
 # atmega 88 fuses: -U lfuse:w:0xff:m -U hfuse:w:0xde:m
 
-COMPILE = avr-gcc -Wall -Os -Iusbdrv -I. -DF_CPU=16000000 -mmcu=$(DEVICE) #-DDEBUG_LEVEL=2
+# dreamcast stick:
+#CFLAGS = -DNO_SELECT -DICANTREAD
+# Namco stick
+CFLAGS = -DINVERTTRIGGERS
+# HRAP
+#CFLAGS = -DNOPSX
+
+COMPILE = avr-gcc -Wall -Os $(CFLAGS) -Iusbdrv -I. -DF_CPU=16000000 -mmcu=$(DEVICE) #-DDEBUG_LEVEL=2
 # NEVER compile the final product with debugging! Any debug output will
 # distort timing so that the specs can't be met.
 
@@ -42,7 +50,7 @@ flash:	all
 
 flash_new: all
 	echo Make sure crystal is in.
-	$(AVRUDDE) -U lfuse:w:0xff:m -U hfuse:w:0xde:m -U flash:w:ctrlr.hex:i
+	$(AVRDUDE) -U lfuse:w:0xff:m -U hfuse:w:0xde:m -U flash:w:ctrlr.hex:i
 
 
 # Fuse low byte:

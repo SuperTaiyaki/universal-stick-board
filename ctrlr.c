@@ -13,10 +13,15 @@ PROGMEM char usbDescriptorDevice[] = {
         0x00,           //subclass code
         0x00,           //protocol code
         0x8,           //EPO buffer size //VSHG is 40, V-USB is 8
-         0xC4, 0x10,    //vendor ID 
+         0xC4, 0x10,    //vendor ID  // VSHG numbers
          0xC0, 0x82, //product ID
         0x06, 0x00, //device release number
-        0x01,           //manufacturer string index
+/*	0x4c, 0x05, //sony IDs
+	0x68, 0x02,
+	0x00, 0x01,
+*/	
+	
+	0x01,           //manufacturer string index
         0x02,           //product string index
         0x00,           //device serial number string index
         0x01            //# of possible configurations
@@ -61,7 +66,7 @@ PROGMEM char usbDescriptorConfiguration[] = {
          0x02,          //endpoint address EP2 OUT
          0x03,          //transfer style: interrupt
          0x40, 0x00,    //max packet size : 64 bytes
-         0x01,          //interval: 1ms (as in dualshock3)
+         0x01,          //interval: 1ms (as in dualshock3... not legal for a low-speed device)
          
 	 //endpoint portion (81 in, the main controller)
          0x07,          //size of desc in bytes
@@ -287,16 +292,19 @@ void doReport() {
 	// would be faster with bst/bld
 	dirs |= (PINB & 0x1) ? 8 : 0;
 */
-	uchar dirs=0;
+	uchar dirs=0; //up
 	dirs |= PINB & 0x1;
 	dirs <<= 1;
 
+	// down
 	dirs |= (PIND & 0x80) ? 1 : 0;
 	dirs <<= 1;
-	dirs |= (PIND & 0x40) ? 1 : 0;
-	dirs <<= 1;
+	// right
 	dirs |= (PIND & 0x20) ? 1 : 0;
-
+	dirs <<= 1;
+	// left
+	dirs |= (PIND & 0x40) ? 1 : 0;
+	
 	reportbuffer[2] = dpad[dirs];
 
 #define MAP(key, bit, block) \
@@ -317,8 +325,8 @@ void doReport() {
 
 #ifndef NO_SELECT
 	MAP(IN_SQ, 0, 14);
-	MAP(IN_X,  1, 13);
 	MAP(IN_CI, 2, 12);
+	MAP(IN_X,  1, 13);
 	
 	if (IN_ST)
 		reportbuffer[1] |= 2;
@@ -327,6 +335,7 @@ void doReport() {
 #else
 	//start + select + PS macros
 	if (IN_ST) {
+		// why are X and [] reversed?
 		if (IN_X)
 			reportbuffer[1] |= 2;
 		if (IN_CI)
@@ -372,11 +381,10 @@ void ioInit() {
 	//status leds
 /*	sbi(PORTB, 1);
 	sbi(PORTB, 2);
-
-	cbi(PORTB, 1);
-	cbi(PORTB, 2);
 */
-	return;
+/*	cbi(PORTB, 1);
+	cbi(PORTB, 2);
+*/	return;
 }
 
 uchar usbFunctionSetup(uchar data[8]) {
@@ -467,7 +475,7 @@ void usb_main() {
 void psx_main();
 
 int main() {
-
+#ifndef NOPSX
 	//decide between PSX and USB modes.
 	//If PSX CLK is high assume it's PSX.
 	/*	
@@ -498,5 +506,9 @@ int main() {
 		psx_main();
 	else
 		usb_main();
+#else
+	usb_main();
+#endif
 	return 0; // ...
 }
+
