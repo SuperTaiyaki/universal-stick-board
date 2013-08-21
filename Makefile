@@ -17,9 +17,9 @@ AVRDUDE = avrdude -p atmega88 -c usbasp
 # atmega 88 fuses: -U lfuse:w:0xff:m -U hfuse:w:0xde:m
 
 # dreamcast stick:
-CFLAGS = -DNO_SELECT -DICANTREAD
+#CFLAGS = -DNO_SELECT -DICANTREAD
 # Namco stick
-#CFLAGS =
+CFLAGS = -DINVERTTRIGGERS
 # HRAP
 #CFLAGS = -DNOPSX
 

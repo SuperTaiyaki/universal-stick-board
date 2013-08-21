@@ -37,9 +37,15 @@
 #define IN_PS (!(PIND & (1 << 2)))
 
 #define IN_R1 (!(PINB & (1 << 1)))
-#define IN_R2 (!(PINB & (1 << 2)))
 #define IN_L1 (!(PIND & (1 << 0)))
+
+#ifdef INVERTTRIGGERS
+#define IN_R2 ((PIND & (1 << 1)))
+#define IN_L2 ((PINB & (1 << 2)))
+#else
 #define IN_L2 (!(PIND & (1 << 1)))
+#define IN_R2 (!(PINB & (1 << 2)))
+#endif
 
 #define IN_UP (!(PINB & (1 << 0)))
 #define IN_DN (!(PIND & (1 << 7)))
